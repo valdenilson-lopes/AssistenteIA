@@ -375,6 +375,9 @@ procedure TFrmAssistenteIA.btnEnviarClick(
 );
 var
   Pergunta: string;
+  RespostaLocal: string;
+  Contexto: TIAContextoUsuario;
+  RespondidaLocalmente: Boolean;
 begin
   if FProcessando then
     Exit;
@@ -392,27 +395,61 @@ begin
     Pergunta
   );
 
-  try
-    lblStatus.Caption :=
-      'Enviando consulta para a IA...';
+  Contexto := nil;
 
-    EnviarPergunta(
-      Pergunta
-    );
+  RespondidaLocalmente := False;
+
+  try
+
+    Contexto :=
+      FContextoProvider.CriarContextoAtual;
+
+    try
+      RespondidaLocalmente :=
+        TIAOperacoesConhecidas.TentarExecutar(
+          Pergunta,
+          Contexto.CodigoFilial,
+          RespostaLocal
+        );
+    finally
+      Contexto.Free;
+    end;
+
+    if RespondidaLocalmente then
+    begin
+
+      AdicionarMensagem(
+        pmAssistente,
+        RespostaLocal
+      );
+
+      FHistorico.Salvar(
+        FConversa
+      );
+
+      lblStatus.Caption :=
+        'Consulta Oracle concluída';
+
+      Exit;
+    end;
 
   except
     on E: Exception do
     begin
       ExibirErro(
-        'Não foi possível enviar a consulta: ' +
+        'Falha na consulta somente leitura: ' +
         E.Message
       );
 
-      lblStatus.Caption :=
-        'Erro ao consultar IA';
+      Exit;
     end;
   end;
+
+  EnviarPergunta(
+    Pergunta
+  );
 end;
+
 procedure TFrmAssistenteIA.EnviarPergunta(
   const APergunta: string
 );

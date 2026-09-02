@@ -1,0 +1,13 @@
+uIAApiLocalManager ajustada
+
+- Usa diretamente Unt_Conexao / dm_conexao.FDConnection.
+- Tenta User_Name/UserName/User nos Params.
+- Tenta Password/PWD nos Params.
+- Tenta Database/Service_Name/ServiceName/SID nos Params.
+- Se vazio, tenta ConnectionDef.Params.UserName/Password/Database.
+- Carrega a conexao automaticamente no constructor.
+- Recarrega a conexao novamente antes de Start.
+- Nao grava credenciais Oracle no INI.
+- Fonte salvo em Windows-1252 para melhor compatibilidade com Delphi legado.
+
+Substitua a unit atual por esta.

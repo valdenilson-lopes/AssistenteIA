@@ -39,6 +39,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 0
+    ExplicitHeight = 435
   end
   object pnlCabecalho: TPanel
     Left = 0
@@ -100,6 +101,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
     Color = 16250871
     ParentBackground = False
     TabOrder = 2
+    ExplicitTop = 563
     DesignSize = (
       1040
       116)
@@ -152,6 +154,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
     Color = 15724527
     ParentBackground = False
     TabOrder = 3
+    ExplicitTop = 679
     DesignSize = (
       1040
       41)
@@ -161,14 +164,6 @@ object FrmAssistenteIA: TFrmAssistenteIA
       Width = 178
       Height = 17
       Caption = 'Pronto para ajudar com o ERP'
-    end
-    object btnConfigIA: TSpeedButton
-      Left = 448
-      Top = 6
-      Width = 161
-      Height = 27
-      Caption = 'Configurar API'
-      OnClick = btnConfigIAClick
     end
     object prgProcessando: TProgressBar
       Left = 838

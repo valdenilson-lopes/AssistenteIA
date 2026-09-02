@@ -1,0 +1,441 @@
+unit uIAConfiguracao;
+
+interface
+
+uses
+  Winapi.Windows,
+  System.SysUtils,
+  System.Classes,
+  System.IniFiles,
+  System.IOUtils,
+  System.NetEncoding;
+
+type
+  TIAConfiguracao = class
+  private
+    FApiBaseUrl: string;
+    FAccessToken: string;
+    FTimeoutMs: Integer;
+
+    function GetIniFileName: string;
+    function ProtectSecret(const AValue: string): string;
+    function UnprotectSecret(const AValue: string): string;
+
+  public
+    constructor Create;
+
+    procedure Load;
+    procedure Save;
+    procedure Validar;
+
+    property ApiBaseUrl: string
+      read FApiBaseUrl
+      write FApiBaseUrl;
+
+    property AccessToken: string
+      read FAccessToken
+      write FAccessToken;
+
+    property TimeoutMs: Integer
+      read FTimeoutMs
+      write FTimeoutMs;
+  end;
+
+implementation
+
+type
+  TDataBlob = record
+    cbData: DWORD;
+    pbData: PByte;
+  end;
+
+  PDataBlob = ^TDataBlob;
+
+const
+  CRYPTPROTECT_UI_FORBIDDEN = $00000001;
+
+function CryptProtectData(
+  pDataIn: PDataBlob;
+  szDataDescr: PWideChar;
+  pOptionalEntropy: PDataBlob;
+  pvReserved: Pointer;
+  pPromptStruct: Pointer;
+  dwFlags: DWORD;
+  pDataOut: PDataBlob
+): BOOL; stdcall; external 'Crypt32.dll';
+
+function CryptUnprotectData(
+  pDataIn: PDataBlob;
+  ppszDataDescr: PPWideChar;
+  pOptionalEntropy: PDataBlob;
+  pvReserved: Pointer;
+  pPromptStruct: Pointer;
+  dwFlags: DWORD;
+  pDataOut: PDataBlob
+): BOOL; stdcall; external 'Crypt32.dll';
+
+
+constructor TIAConfiguracao.Create;
+begin
+  inherited Create;
+
+  FApiBaseUrl :=
+    'http://127.0.0.1:8080';
+
+  FAccessToken :=
+    '';
+
+  FTimeoutMs :=
+    60000;
+
+  Load;
+end;
+
+
+function TIAConfiguracao.GetIniFileName: string;
+var
+  Pasta: string;
+begin
+  Pasta :=
+    TPath.Combine(
+      GetEnvironmentVariable('APPDATA'),
+      'AssistenteIA'
+    );
+
+  if Trim(Pasta) = '' then
+    Pasta :=
+      TPath.Combine(
+        TPath.GetTempPath,
+        'AssistenteIA'
+      );
+
+  ForceDirectories(Pasta);
+
+  Result :=
+    TPath.Combine(
+      Pasta,
+      'ia-api-local.ini'
+    );
+end;
+
+
+function TIAConfiguracao.ProtectSecret(
+  const AValue: string
+): string;
+var
+  InBlob: TDataBlob;
+  OutBlob: TDataBlob;
+  Bytes: TBytes;
+begin
+  Result := '';
+
+  if AValue = '' then
+    Exit;
+
+  Bytes :=
+    TEncoding.UTF8.GetBytes(AValue);
+
+  ZeroMemory(
+    @InBlob,
+    SizeOf(InBlob)
+  );
+
+  ZeroMemory(
+    @OutBlob,
+    SizeOf(OutBlob)
+  );
+
+  if Length(Bytes) > 0 then
+  begin
+    InBlob.cbData :=
+      Length(Bytes);
+
+    InBlob.pbData :=
+      @Bytes[0];
+  end;
+
+  if not CryptProtectData(
+    @InBlob,
+    nil,
+    nil,
+    nil,
+    nil,
+    CRYPTPROTECT_UI_FORBIDDEN,
+    @OutBlob
+  ) then
+    RaiseLastOSError;
+
+  try
+
+    SetLength(
+      Bytes,
+      OutBlob.cbData
+    );
+
+    if OutBlob.cbData > 0 then
+      Move(
+        OutBlob.pbData^,
+        Bytes[0],
+        OutBlob.cbData
+      );
+
+    Result :=
+      TNetEncoding.Base64.EncodeBytesToString(
+        Bytes
+      );
+
+  finally
+
+    if OutBlob.pbData <> nil then
+      LocalFree(
+        HLOCAL(OutBlob.pbData)
+      );
+
+  end;
+end;
+
+
+function TIAConfiguracao.UnprotectSecret(
+  const AValue: string
+): string;
+var
+  InBlob: TDataBlob;
+  OutBlob: TDataBlob;
+  Bytes: TBytes;
+  Description: PWideChar;
+begin
+  Result := '';
+
+  if Trim(AValue) = '' then
+    Exit;
+
+  Bytes :=
+    TNetEncoding.Base64.DecodeStringToBytes(
+      AValue
+    );
+
+  ZeroMemory(
+    @InBlob,
+    SizeOf(InBlob)
+  );
+
+  ZeroMemory(
+    @OutBlob,
+    SizeOf(OutBlob)
+  );
+
+  Description :=
+    nil;
+
+  if Length(Bytes) > 0 then
+  begin
+    InBlob.cbData :=
+      Length(Bytes);
+
+    InBlob.pbData :=
+      @Bytes[0];
+  end;
+
+  if not CryptUnprotectData(
+    @InBlob,
+    @Description,
+    nil,
+    nil,
+    nil,
+    CRYPTPROTECT_UI_FORBIDDEN,
+    @OutBlob
+  ) then
+    RaiseLastOSError;
+
+  try
+
+    SetLength(
+      Bytes,
+      OutBlob.cbData
+    );
+
+    if OutBlob.cbData > 0 then
+      Move(
+        OutBlob.pbData^,
+        Bytes[0],
+        OutBlob.cbData
+      );
+
+    Result :=
+      TEncoding.UTF8.GetString(
+        Bytes
+      );
+
+  finally
+
+    if Description <> nil then
+      LocalFree(
+        HLOCAL(Description)
+      );
+
+    if OutBlob.pbData <> nil then
+      LocalFree(
+        HLOCAL(OutBlob.pbData)
+      );
+
+  end;
+end;
+
+
+procedure TIAConfiguracao.Load;
+var
+  Ini: TIniFile;
+  TokenProtegido: string;
+  ValorAmbiente: string;
+begin
+  Ini :=
+    TIniFile.Create(
+      GetIniFileName
+    );
+
+  try
+
+    FApiBaseUrl :=
+      Ini.ReadString(
+        'API',
+        'BaseUrl',
+        FApiBaseUrl
+      );
+
+    FTimeoutMs :=
+      Ini.ReadInteger(
+        'API',
+        'TimeoutMs',
+        FTimeoutMs
+      );
+
+    TokenProtegido :=
+      Ini.ReadString(
+        'API',
+        'AccessTokenProtected',
+        ''
+      );
+
+    if TokenProtegido <> '' then
+    begin
+      try
+        FAccessToken :=
+          UnprotectSecret(
+            TokenProtegido
+          );
+      except
+        FAccessToken := '';
+      end;
+    end;
+
+  finally
+    Ini.Free;
+  end;
+
+
+  {
+    Se houver variavel de ambiente,
+    ela tem prioridade sobre o INI.
+  }
+
+  ValorAmbiente :=
+    Trim(
+      GetEnvironmentVariable(
+        'ERP_IA_API_URL'
+      )
+    );
+
+  if ValorAmbiente <> '' then
+    FApiBaseUrl :=
+      ValorAmbiente;
+
+
+  ValorAmbiente :=
+    Trim(
+      GetEnvironmentVariable(
+        'ERP_IA_API_TOKEN'
+      )
+    );
+
+  if ValorAmbiente <> '' then
+    FAccessToken :=
+      ValorAmbiente;
+end;
+
+
+procedure TIAConfiguracao.Save;
+var
+  Ini: TIniFile;
+begin
+  Ini :=
+    TIniFile.Create(
+      GetIniFileName
+    );
+
+  try
+
+    Ini.WriteString(
+      'API',
+      'BaseUrl',
+      Trim(FApiBaseUrl)
+    );
+
+    Ini.WriteInteger(
+      'API',
+      'TimeoutMs',
+      FTimeoutMs
+    );
+
+    if Trim(FAccessToken) <> '' then
+    begin
+      Ini.WriteString(
+        'API',
+        'AccessTokenProtected',
+        ProtectSecret(
+          FAccessToken
+        )
+      );
+    end
+    else
+    begin
+      Ini.DeleteKey(
+        'API',
+        'AccessTokenProtected'
+      );
+    end;
+
+  finally
+    Ini.Free;
+  end;
+end;
+
+
+procedure TIAConfiguracao.Validar;
+begin
+  if Trim(FApiBaseUrl) = '' then
+    raise EInvalidOpException.Create(
+      'Informe a URL da API corporativa.');
+
+  if not SameText(
+       Copy(FApiBaseUrl, 1, 8),
+       'https://'
+     ) and
+     not SameText(
+       Copy(FApiBaseUrl, 1, 17),
+       'http://localhost'
+     ) and
+     not SameText(
+       Copy(FApiBaseUrl, 1, 16),
+       'http://127.0.0.1'
+     ) then
+  begin
+    raise EInvalidOpException.Create(
+      'A API deve utilizar HTTPS ou endereco local.');
+  end;
+
+  if FTimeoutMs <= 0 then
+    raise EInvalidOpException.Create(
+      'Timeout invalido para a API de IA.');
+end;
+
+end.

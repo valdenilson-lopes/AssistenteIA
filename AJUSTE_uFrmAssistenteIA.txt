@@ -1,0 +1,38 @@
+AJUSTE NA uFrmAssistenteIA.pas
+
+A nova versão NÃO pede usuário/senha/DSN Oracle na tela.
+
+Depois de criar FApiLocalManager no FormCreate, carregue a conexão FireDAC já
+aberta do ERP.
+
+Considerando que a sua Unt_Conexao expõe a conexão como "Conexao":
+
+  FConfiguracao := TIAConfiguracao.Create;
+  FApiLocalManager := TIAApiLocalManager.Create(FConfiguracao);
+
+  FApiLocalManager.LoadOracleFromConnection(Conexao);
+
+IMPORTANTE:
+O nome "Conexao" acima precisa ser o TFDConnection real da sua Unt_Conexao.
+
+Como o repositório AssistenteIA referencia Unt_Conexao mas não contém o fonte
+dessa unit, não foi possível confirmar pelo GitHub o nome interno do componente.
+
+Se "Conexao" compilar no seu ERP, use exatamente a linha acima.
+
+Se não compilar, passe ao método o TFDConnection que já é utilizado no ERP:
+
+  FApiLocalManager.LoadOracleFromConnection(SEU_TFDCONNECTION);
+
+A função lê automaticamente dos Params do FireDAC:
+
+- User_Name / UserName / User
+- Password / PWD
+- Server / Host / HostName
+- Port
+- Database / Service_Name / ServiceName / SID
+
+O Oracle não é gravado no INI. Ele é recarregado da conexão ativa a cada
+execução do ERP.
+
+Apenas a OpenAI Key continua persistida, protegida via Windows DPAPI.

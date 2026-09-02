@@ -43,10 +43,10 @@ begin
         dm_conexao.SQL_EMPREGADOCODFUNC.AsString
       );
 
-    CodFilial := '01';
-     /// Trim(
-      //  dm_conexao.SQL_EMPREGADOCODFILIAL.AsString
-     // );
+    CodFilial :=
+      Trim(
+        dm_conexao.SQL_EMPREGADOCODFILIAL.AsString
+      );
 
     if CodUsuario = '' then
       raise Exception.Create(
@@ -62,7 +62,8 @@ begin
     Result.CodigoEmpresa :=
       Trim(dm_conexao.vsEMPRESA);
 
-    Result.CodigoFilial := '01';
+    Result.CodigoFilial :=
+      CodFilial;
 
     Result.RotinaOrigem :=
       Trim(dm_conexao.vsCODPROG);

@@ -2,7 +2,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
   Left = 0
   Top = 0
   Caption = 'Assistente IA do ERP'
-  ClientHeight = 614
+  ClientHeight = 720
   ClientWidth = 1040
   Color = 16250871
   Font.Charset = DEFAULT_CHARSET
@@ -22,7 +22,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
     Left = 32
     Top = 112
     Width = 976
-    Height = 329
+    Height = 435
     Margins.Left = 32
     Margins.Top = 24
     Margins.Right = 32
@@ -92,7 +92,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
   end
   object pnlRodape: TPanel
     Left = 0
-    Top = 457
+    Top = 563
     Width = 1040
     Height = 116
     Align = alBottom
@@ -144,7 +144,7 @@ object FrmAssistenteIA: TFrmAssistenteIA
   end
   object pnlStatus: TPanel
     Left = 0
-    Top = 573
+    Top = 679
     Width = 1040
     Height = 41
     Align = alBottom
@@ -161,14 +161,6 @@ object FrmAssistenteIA: TFrmAssistenteIA
       Width = 178
       Height = 17
       Caption = 'Pronto para ajudar com o ERP'
-    end
-    object btnConfigIA: TSpeedButton
-      Left = 448
-      Top = 6
-      Width = 161
-      Height = 27
-      Caption = 'Configurar API'
-      OnClick = btnConfigIAClick
     end
     object prgProcessando: TProgressBar
       Left = 838

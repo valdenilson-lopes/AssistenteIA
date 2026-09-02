@@ -1,0 +1,204 @@
+object FrmConfiguracaoIA: TFrmConfiguracaoIA
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Configuração da API de IA'
+  ClientHeight = 590
+  ClientWidth = 760
+  Color = 16250871
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = 3158064
+  Font.Height = -13
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  Position = poScreenCenter
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 17
+  object pnlTopo: TPanel
+    Left = 0
+    Top = 0
+    Width = 760
+    Height = 88
+    Align = alTop
+    BevelOuter = bvNone
+    Color = 2105376
+    ParentBackground = False
+    TabOrder = 0
+    object lblTitulo: TLabel
+      Left = 24
+      Top = 16
+      Width = 240
+      Height = 25
+      Caption = 'API intermediária do Assistente'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -19
+      Font.Name = 'Segoe UI Semibold'
+      Font.Style = []
+      ParentFont = False
+    end
+    object lblAviso: TLabel
+      Left = 24
+      Top = 49
+      Width = 625
+      Height = 17
+      Caption = 'A chave da OpenAI permanece somente no ambiente do servidor e nunca é salva nesta tela.'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clSilver
+      Font.Height = -13
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+    end
+  end
+  object lblApiUrl: TLabel
+    Left = 24
+    Top = 108
+    Width = 67
+    Height = 17
+    Caption = 'URL da API'
+  end
+  object edtApiUrl: TEdit
+    Left = 24
+    Top = 130
+    Width = 712
+    Height = 25
+    TabOrder = 1
+    Text = 'http://127.0.0.1:8080'
+  end
+  object lblPython: TLabel
+    Left = 24
+    Top = 170
+    Width = 110
+    Height = 17
+    Caption = 'Executável Python'
+  end
+  object edtPython: TEdit
+    Left = 24
+    Top = 192
+    Width = 712
+    Height = 25
+    TabOrder = 2
+    Text = 'python.exe'
+  end
+  object lblServerDir: TLabel
+    Left = 24
+    Top = 232
+    Width = 127
+    Height = 17
+    Caption = 'Pasta server do projeto'
+  end
+  object edtServerDir: TEdit
+    Left = 24
+    Top = 254
+    Width = 712
+    Height = 25
+    TabOrder = 3
+  end
+  object chkAutoStart: TCheckBox
+    Left = 24
+    Top = 296
+    Width = 280
+    Height = 21
+    Caption = 'Iniciar API automaticamente ao abrir'
+    TabOrder = 4
+  end
+  object chkShowConsole: TCheckBox
+    Left = 328
+    Top = 296
+    Width = 290
+    Height = 21
+    Caption = 'Exibir janela do Python para diagnóstico'
+    Checked = True
+    State = cbChecked
+    TabOrder = 5
+  end
+  object grpStatus: TGroupBox
+    Left = 24
+    Top = 334
+    Width = 712
+    Height = 158
+    Caption = ' Status '
+    TabOrder = 6
+    object lblStatusApi: TLabel
+      Left = 16
+      Top = 27
+      Width = 80
+      Height = 17
+      Caption = 'API OFFLINE'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = 3158064
+      Font.Height = -13
+      Font.Name = 'Segoe UI Semibold'
+      Font.Style = []
+      ParentFont = False
+    end
+    object memDetalhes: TMemo
+      Left = 16
+      Top = 52
+      Width = 680
+      Height = 88
+      ReadOnly = True
+      ScrollBars = ssVertical
+      TabOrder = 0
+    end
+  end
+  object btnTestar: TButton
+    Left = 24
+    Top = 516
+    Width = 92
+    Height = 38
+    Caption = 'Testar'
+    TabOrder = 7
+    OnClick = btnTestarClick
+  end
+  object btnIniciar: TButton
+    Left = 124
+    Top = 516
+    Width = 92
+    Height = 38
+    Caption = 'Iniciar'
+    TabOrder = 8
+    OnClick = btnIniciarClick
+  end
+  object btnReiniciar: TButton
+    Left = 224
+    Top = 516
+    Width = 92
+    Height = 38
+    Caption = 'Reiniciar'
+    TabOrder = 9
+    OnClick = btnReiniciarClick
+  end
+  object btnParar: TButton
+    Left = 324
+    Top = 516
+    Width = 92
+    Height = 38
+    Caption = 'Parar'
+    TabOrder = 10
+    OnClick = btnPararClick
+  end
+  object btnSalvar: TButton
+    Left = 536
+    Top = 516
+    Width = 96
+    Height = 38
+    Caption = 'Salvar'
+    Default = True
+    TabOrder = 11
+    OnClick = btnSalvarClick
+  end
+  object btnFechar: TButton
+    Left = 640
+    Top = 516
+    Width = 96
+    Height = 38
+    Cancel = True
+    Caption = 'Fechar'
+    TabOrder = 12
+    OnClick = btnFecharClick
+  end
+end

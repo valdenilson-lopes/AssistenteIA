@@ -48,7 +48,7 @@ constructor TIAConfiguracao.Create;
 begin
   inherited Create;
 
-  FApiBaseUrl := 'http://127.0.0.1:8080';
+  FApiBaseUrl := 'http://127.0.0.1:8081';
   FAccessToken := '';
   FTimeoutMs := 60000;
 

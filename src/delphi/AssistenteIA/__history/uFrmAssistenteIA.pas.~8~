@@ -206,20 +206,35 @@ begin
 
   FConfiguracao := TIAConfiguracao.Create;
 
-  FApiLocalManager :=
-    TIAApiLocalManager.Create(FConfiguracao);
+  FApiLocalManager := TIAApiLocalManager.Create(
+    FConfiguracao
+  );
 
-  { CARREGA A CONEXAO ORACLE DO ERP }
-  FApiLocalManager.LoadOracleFromERP;
+  FContextoProvider := TIAContextoAmbiente.Create;
 
-  FContextoProvider :=
-    TIAContextoAmbiente.Create;
+  FHistorico := TIARepositorioHistoricoMemoria.Create;
 
-  FHistorico :=
-    TIARepositorioHistoricoMemoria.Create;
+  FServico := TIAApiClient.Create(
+    FConfiguracao
+  );
 
-  FServico :=
-    TIAApiClient.Create(FConfiguracao);
+  {
+    Se estiver marcado AutoStart na configuração,
+    tenta iniciar automaticamente a API.
+  }
+  if FApiLocalManager.Settings.AutoStart then
+  begin
+    try
+      FApiLocalManager.Start;
+
+      lblStatus.Caption :=
+        'API local iniciada';
+    except
+      on E: Exception do
+        lblStatus.Caption :=
+          'API local não iniciou: ' + E.Message;
+    end;
+  end;
 
   NovaConversa;
 end;
@@ -375,6 +390,9 @@ procedure TFrmAssistenteIA.btnEnviarClick(
 );
 var
   Pergunta: string;
+  RespostaLocal: string;
+  Contexto: TIAContextoUsuario;
+  RespondidaLocalmente: Boolean;
 begin
   if FProcessando then
     Exit;
@@ -392,27 +410,61 @@ begin
     Pergunta
   );
 
-  try
-    lblStatus.Caption :=
-      'Enviando consulta para a IA...';
+  Contexto := nil;
 
-    EnviarPergunta(
-      Pergunta
-    );
+  RespondidaLocalmente := False;
+
+  try
+
+    Contexto :=
+      FContextoProvider.CriarContextoAtual;
+
+    try
+      RespondidaLocalmente :=
+        TIAOperacoesConhecidas.TentarExecutar(
+          Pergunta,
+          Contexto.CodigoFilial,
+          RespostaLocal
+        );
+    finally
+      Contexto.Free;
+    end;
+
+    if RespondidaLocalmente then
+    begin
+
+      AdicionarMensagem(
+        pmAssistente,
+        RespostaLocal
+      );
+
+      FHistorico.Salvar(
+        FConversa
+      );
+
+      lblStatus.Caption :=
+        'Consulta Oracle concluída';
+
+      Exit;
+    end;
 
   except
     on E: Exception do
     begin
       ExibirErro(
-        'Não foi possível enviar a consulta: ' +
+        'Falha na consulta somente leitura: ' +
         E.Message
       );
 
-      lblStatus.Caption :=
-        'Erro ao consultar IA';
+      Exit;
     end;
   end;
+
+  EnviarPergunta(
+    Pergunta
+  );
 end;
+
 procedure TFrmAssistenteIA.EnviarPergunta(
   const APergunta: string
 );

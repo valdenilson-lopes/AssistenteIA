@@ -13,9 +13,7 @@ uses
   Classe.Auxiliar in '..\..\..\..\bspac0000_util\XE5\Classe.Auxiliar.pas',
   Unt_Conexao in '..\..\..\..\bspac0000_util\XE5\Unt_Conexao.pas' {DM_CONEXAO: TDataModule},
   Unt_Util in '..\..\..\..\bspac0000_util\XE5\Unt_Util.pas',
-  uResultado in '..\..\..\..\bspac0000_util\form\uResultado.pas' {frmResultado},
-  uFrmConfiguracaoIA in 'uFrmConfiguracaoIA.pas' {FrmConfiguracaoIA},
-  uIAContextoAmbiente in 'uIAContextoAmbiente.pas';
+  uResultado in '..\..\..\..\bspac0000_util\form\uResultado.pas' {frmResultado};
 
 begin
   Application.Initialize;

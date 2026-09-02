@@ -168,7 +168,6 @@ object FrmAssistenteIA: TFrmAssistenteIA
       Width = 161
       Height = 27
       Caption = 'Configurar API'
-      OnClick = btnConfigIAClick
     end
     object prgProcessando: TProgressBar
       Left = 838
