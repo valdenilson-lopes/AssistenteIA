@@ -1,0 +1,310 @@
+unit uFrmAssistenteIA;
+
+interface
+
+uses
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Classes,
+  System.UITypes,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls,
+  Vcl.ComCtrls,
+  uIATipos,
+  uIAContratos,
+  uIAConfiguracao;
+
+type
+  TFrmAssistenteIA = class;
+
+  TIAConsultaThread = class(TThread)
+  private
+    FFormulario: TFrmAssistenteIA;
+    FServico: IIAAssistenteService;
+    FRequisicao: TIARequisicao;
+    FResposta: TIAResposta;
+    FErro: string;
+    procedure EntregarResultado;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(const AFormulario: TFrmAssistenteIA;
+      const AServico: IIAAssistenteService; const ARequisicao: TIARequisicao);
+  end;
+
+  TFrmAssistenteIA = class(TForm)
+    pnlCabecalho: TPanel;
+    lblTitulo: TLabel;
+    lblSubtitulo: TLabel;
+    btnNovaConversa: TButton;
+    pnlRodape: TPanel;
+    memPergunta: TMemo;
+    btnEnviar: TButton;
+    btnEnsinar: TButton;
+    pnlStatus: TPanel;
+    lblStatus: TLabel;
+    prgProcessando: TProgressBar;
+    memConversa: TMemo;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure btnEnviarClick(Sender: TObject);
+    procedure btnNovaConversaClick(Sender: TObject);
+    procedure btnEnsinarClick(Sender: TObject);
+    procedure memPerguntaKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+  private
+    FConfiguracao: TIAConfiguracao;
+    FServico: IIAAssistenteService;
+    FContextoProvider: IIAContextoProvider;
+    FHistorico: IIARepositorioHistorico;
+    FConversa: TIAConversa;
+    FProcessando: Boolean;
+    function NovoId: string;
+    procedure AdicionarMensagem(const APapel: TIAPapelMensagem;
+      const ATexto: string);
+    procedure AtualizarEstado(const AProcessando: Boolean;
+      const AStatus: string);
+    procedure ExibirResposta(const AResposta: TIAResposta);
+    procedure ExibirErro(const AMensagem: string);
+    procedure EnviarPergunta(const APergunta: string);
+    procedure NovaConversa;
+  end;
+
+var
+  FrmAssistenteIA: TFrmAssistenteIA;
+
+implementation
+
+uses
+  uIAApiClient,
+  uIAContextoAmbiente,
+  uIAHistoricoMemoria;
+
+{$R *.dfm}
+
+constructor TIAConsultaThread.Create(const AFormulario: TFrmAssistenteIA;
+  const AServico: IIAAssistenteService; const ARequisicao: TIARequisicao);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FFormulario := AFormulario;
+  FServico := AServico;
+  FRequisicao := ARequisicao;
+end;
+
+procedure TIAConsultaThread.Execute;
+begin
+  try
+    try
+      FResposta := FServico.Perguntar(FRequisicao);
+    except
+      on E: Exception do
+        FErro := E.Message;
+    end;
+  finally
+    FRequisicao.Contexto.Free;
+    FRequisicao.Free;
+  end;
+  Synchronize(EntregarResultado);
+end;
+
+procedure TIAConsultaThread.EntregarResultado;
+begin
+  if FErro <> '' then
+    FFormulario.ExibirErro(FErro)
+  else
+  begin
+    FFormulario.ExibirResposta(FResposta);
+    FResposta.Free;
+    FResposta := nil;
+  end;
+end;
+
+function TFrmAssistenteIA.NovoId: string;
+var
+  Id: TGUID;
+begin
+  CreateGUID(Id);
+  Result := GUIDToString(Id);
+  Result := Copy(Result, 2, Length(Result) - 2);
+  Result := LowerCase(Result);
+end;
+
+procedure TFrmAssistenteIA.FormCreate(Sender: TObject);
+begin
+  Color := $00F7F7F8;
+  Font.Name := 'Segoe UI';
+  FConfiguracao := TIAConfiguracao.Create;
+  FContextoProvider := TIAContextoAmbiente.Create;
+  FHistorico := TIARepositorioHistoricoMemoria.Create;
+  FServico := TIAApiClient.Create(FConfiguracao);
+  NovaConversa;
+end;
+
+procedure TFrmAssistenteIA.FormDestroy(Sender: TObject);
+begin
+  FServico := nil;
+  FContextoProvider := nil;
+  FHistorico := nil;
+  FConversa.Free;
+  FConfiguracao.Free;
+end;
+
+procedure TFrmAssistenteIA.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := not FProcessando;
+  if not CanClose then
+    MessageDlg('Aguarde a conclusao da pergunta atual.', mtInformation, [mbOK], 0);
+end;
+
+procedure TFrmAssistenteIA.NovaConversa;
+begin
+  if Assigned(FConversa) then
+    FHistorico.Salvar(FConversa);
+  FreeAndNil(FConversa);
+  FConversa := TIAConversa.Create;
+  FConversa.Id := NovoId;
+  memConversa.Clear;
+  memPergunta.Clear;
+  btnEnsinar.Visible := False;
+  lblStatus.Caption := 'Pronto para ajudar com o ERP';
+  memPergunta.SetFocus;
+end;
+
+procedure TFrmAssistenteIA.btnNovaConversaClick(Sender: TObject);
+begin
+  if not FProcessando then
+    NovaConversa;
+end;
+
+procedure TFrmAssistenteIA.AdicionarMensagem(const APapel: TIAPapelMensagem;
+  const ATexto: string);
+var
+  Mensagem: TIAMensagem;
+  Rotulo: string;
+begin
+  Mensagem := TIAMensagem.Create;
+  Mensagem.Papel := APapel;
+  Mensagem.Conteudo := ATexto;
+  Mensagem.CriadaEm := Now;
+  FConversa.Mensagens.Add(Mensagem);
+  FConversa.AtualizadaEm := Mensagem.CriadaEm;
+  case APapel of
+    pmUsuario: Rotulo := 'Voce';
+    pmAssistente: Rotulo := 'Assistente';
+  else
+    Rotulo := 'Sistema';
+  end;
+  if memConversa.Lines.Count > 0 then
+    memConversa.Lines.Add('');
+  memConversa.Lines.Add(Rotulo + '  ' + FormatDateTime('hh:nn', Mensagem.CriadaEm));
+  memConversa.Lines.Add(ATexto);
+  memConversa.SelStart := Length(memConversa.Text);
+  memConversa.Perform(EM_SCROLLCARET, 0, 0);
+end;
+
+procedure TFrmAssistenteIA.AtualizarEstado(const AProcessando: Boolean;
+  const AStatus: string);
+begin
+  FProcessando := AProcessando;
+  btnEnviar.Enabled := not AProcessando;
+  btnNovaConversa.Enabled := not AProcessando;
+  memPergunta.Enabled := not AProcessando;
+  prgProcessando.Visible := AProcessando;
+  lblStatus.Caption := AStatus;
+end;
+
+procedure TFrmAssistenteIA.btnEnviarClick(Sender: TObject);
+var
+  Pergunta: string;
+begin
+  if FProcessando then
+    Exit;
+  Pergunta := Trim(memPergunta.Text);
+  if Pergunta = '' then
+    Exit;
+  memPergunta.Clear;
+  AdicionarMensagem(pmUsuario, Pergunta);
+  EnviarPergunta(Pergunta);
+end;
+
+procedure TFrmAssistenteIA.EnviarPergunta(const APergunta: string);
+var
+  Requisicao: TIARequisicao;
+  ContextoErro: string;
+begin
+  Requisicao := TIARequisicao.Create;
+  try
+    Requisicao.IdRequisicao := NovoId;
+    Requisicao.IdConversa := FConversa.Id;
+    Requisicao.Pergunta := APergunta;
+    Requisicao.Contexto := FContextoProvider.CriarContextoAtual;
+  except
+    on E: Exception do
+      ContextoErro := E.Message;
+  end;
+  if ContextoErro <> '' then
+  begin
+    Requisicao.Contexto.Free;
+    Requisicao.Free;
+    ExibirErro('O contexto do ERP ainda nao esta configurado: ' + ContextoErro);
+    Exit;
+  end;
+
+  AtualizarEstado(True, 'Consultando fontes autorizadas...');
+  with TIAConsultaThread.Create(Self, FServico, Requisicao) do
+    Start;
+end;
+
+procedure TFrmAssistenteIA.ExibirResposta(const AResposta: TIAResposta);
+var
+  Fonte: TIAFonte;
+  Texto: string;
+begin
+  Texto := AResposta.Resposta;
+  if (AResposta.Fontes.Count > 0) then
+  begin
+    Texto := Texto + sLineBreak + sLineBreak + 'Fontes:';
+    for Fonte in AResposta.Fontes do
+      Texto := Texto + sLineBreak + '- ' + Fonte.Titulo;
+  end;
+  AdicionarMensagem(pmAssistente, Texto);
+  btnEnsinar.Visible := (AResposta.Status = srConhecimentoInsuficiente) or
+    SameText(AResposta.AcaoSugerida, 'teach_ai');
+  FConversa.Id := AResposta.IdConversa;
+  FHistorico.Salvar(FConversa);
+  AtualizarEstado(False, 'Resposta concluida');
+  memPergunta.SetFocus;
+end;
+
+procedure TFrmAssistenteIA.ExibirErro(const AMensagem: string);
+begin
+  AdicionarMensagem(pmSistema,
+    'Nao foi possivel concluir a solicitacao. ' + AMensagem);
+  AtualizarEstado(False, 'Falha na comunicacao');
+  memPergunta.SetFocus;
+end;
+
+procedure TFrmAssistenteIA.btnEnsinarClick(Sender: TObject);
+begin
+  MessageDlg('O Centro de Conhecimento sera conectado ao ERP na proxima etapa. ' +
+    'Nenhum conteudo e publicado sem revisao e aprovacao.', mtInformation, [mbOK], 0);
+end;
+
+procedure TFrmAssistenteIA.memPerguntaKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_RETURN) and (ssCtrl in Shift) then
+  begin
+    Key := 0;
+    btnEnviarClick(btnEnviar);
+  end;
+end;
+
+end.

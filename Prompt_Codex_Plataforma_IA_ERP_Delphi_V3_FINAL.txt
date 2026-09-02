@@ -1,0 +1,1200 @@
+Você é um agente de desenvolvimento trabalhando em um ERP legado/moderno desenvolvido em Delphi VCL, com banco de dados Oracle e acesso via FireDAC.
+
+Sua missão é implementar uma PLATAFORMA DE IA CORPORATIVA integrada ao ERP.
+
+IMPORTANTE:
+Não trate este projeto como a simples criação de um chatbot.
+O objetivo é criar uma camada de inteligência nativa do ERP, inicialmente SOMENTE PARA CONSULTA, que possa:
+- responder perguntas sobre dados atuais do ERP;
+- responder perguntas sobre funcionamento, rotinas e regras do sistema;
+- consultar fontes autorizadas do banco;
+- utilizar documentação interna como conhecimento;
+- reconhecer quando não sabe uma resposta;
+- solicitar/registrar novo conhecimento;
+- aprender por meio de documentos aprovados e indexados;
+- evoluir módulo a módulo;
+- funcionar sem que todo o projeto Delphi precise ser fornecido de uma vez;
+- ser econômica no consumo de tokens;
+- permanecer desacoplada do provedor de IA.
+
+======================================================================
+1. OBJETIVO GERAL
+======================================================================
+
+Permitir que o usuário, dentro do ERP Delphi, faça perguntas em linguagem natural, por exemplo:
+
+- Quanto vendemos hoje?
+- Qual vendedor vendeu mais este mês?
+- Quais produtos estão com estoque baixo?
+- Quanto temos de contas a receber vencidas?
+- Quais títulos PIX estão pendentes de conciliação?
+- Como faço determinada operação na rotina 9003?
+- O que significa determinado campo?
+- Como funciona determinada regra do Financeiro?
+
+O assistente deve responder EXCLUSIVAMENTE sobre:
+- ERP;
+- dados disponibilizados pelo ERP;
+- documentação interna;
+- regras e rotinas documentadas;
+- informações obtidas por ferramentas autorizadas.
+
+Não habilitar navegação web para o usuário final.
+
+======================================================================
+2. REGRA PRINCIPAL DE DESENVOLVIMENTO
+======================================================================
+
+NUNCA invente:
+- tabelas;
+- campos;
+- relacionamentos;
+- regras de negócio;
+- nomes de units;
+- variáveis globais;
+- componentes;
+- endpoints existentes;
+- permissões;
+- procedures;
+- views;
+- infraestrutura que não tenha sido confirmada.
+
+Quando uma informação real do ERP ainda não tiver sido fornecida:
+
+1. não interrompa a arquitetura inteira;
+2. crie uma interface/contrato apropriado;
+3. deixe a implementação concreta isolada;
+4. marque claramente o ponto que depende da informação;
+5. informe objetivamente quais arquivos, tabelas, campos ou regras precisam ser fornecidos;
+6. NÃO substitua a informação ausente por uma suposição.
+
+O projeto será apresentado ao Codex de forma incremental.
+
+Cada módulo poderá ser ensinado separadamente:
+- Vendas;
+- Financeiro;
+- Estoque;
+- Clientes;
+- Produtos;
+- PIX;
+- Fiscal;
+- Tributação;
+- Compras;
+- Cadastros;
+- outros.
+
+======================================================================
+3. RESTRIÇÕES FUNDAMENTAIS
+======================================================================
+
+1. MVP SOMENTE LEITURA.
+
+2. Não permitir:
+   INSERT
+   UPDATE
+   DELETE
+   MERGE
+   ALTER
+   DROP
+   CREATE
+   TRUNCATE
+   EXECUTE
+   GRANT
+   REVOKE
+   ou procedures que alterem dados.
+
+3. A IA nunca deve possuir credenciais administrativas do banco.
+
+4. Segurança de:
+   - empresa;
+   - filial;
+   - usuário;
+   - permissões;
+   deve ser aplicada pelo ERP/API/camada de dados.
+   NUNCA confiar apenas no modelo.
+
+5. Não enviar schema completo do banco em cada pergunta.
+
+6. Não enviar toda a documentação em cada pergunta.
+
+7. Não enviar todo o histórico de conversas indefinidamente.
+
+8. Nunca colocar a API key/token da OpenAI dentro do executável Delphi distribuído.
+
+9. A IA nunca deve inventar uma resposta quando não possuir informação suficiente.
+
+10. Dados atuais devem vir de consulta/ferramenta.
+    Nunca tratar conhecimento antigo do modelo como dado atual do ERP.
+
+======================================================================
+4. ARQUITETURA GERAL
+======================================================================
+
+Utilizar esta separação conceitual:
+
+ERP DELPHI
+    |
+    v
+API INTERMEDIÁRIA DO ERP
+    |
+    +--> ORQUESTRADOR DE IA
+    |       |
+    |       +--> PROVEDOR DE IA
+    |       |
+    |       +--> CENTRO DE CONHECIMENTO / RAG
+    |       |
+    |       +--> CATÁLOGO DE FERRAMENTAS
+    |               |
+    |               +--> OPERAÇÕES CONHECIDAS
+    |               |
+    |               +--> VIEWS BI
+    |               |
+    |               +--> SELECT CONTROLADO
+    |
+    +--> SEGURANÇA / AUDITORIA / TOKENS
+    |
+    v
+BANCO ORACLE
+
+A aplicação Delphi deve ser cliente da API corporativa.
+Ela NÃO deve falar diretamente com a OpenAI em produção.
+
+======================================================================
+5. INTERFACE DELPHI — ASSISTENTE IA
+======================================================================
+
+Criar uma tela de chat integrada ao padrão visual existente do ERP.
+
+Sugestão:
+- uFrmAssistenteIA.pas
+- uFrmAssistenteIA.dfm
+
+Antes de criar, verificar padrões/nomenclatura reais do projeto.
+
+Componentes/funções mínimas:
+
+- histórico visual da conversa;
+- campo para pergunta;
+- botão Enviar;
+- indicador de processamento;
+- botão Nova Conversa;
+- Enter/Ctrl+Enter conforme padrão definido;
+- bloqueio de envio duplicado;
+- tratamento de erros sem derrubar o ERP;
+- identificação de conversa;
+- possibilidade futura de reabrir conversas anteriores;
+- exibição opcional das fontes utilizadas;
+- ação "Ensinar a IA" quando houver conhecimento insuficiente.
+
+A tela NÃO deve conter regras específicas de OpenAI.
+Ela conversa apenas com a camada de serviço do ERP.
+
+======================================================================
+6. SERVIÇO DELPHI
+======================================================================
+
+Criar uma camada central de orquestração Delphi.
+
+Sugestão:
+- uAssistenteIA.pas
+
+Responsabilidades:
+
+- receber pergunta da tela;
+- montar contexto mínimo;
+- chamar API intermediária;
+- interpretar retorno;
+- controlar estado da conversa;
+- devolver resposta estruturada para a interface.
+
+Tipos sugeridos:
+
+- TIAContextoUsuario
+- TIARequisicao
+- TIAResposta
+- TIAFonte
+- TIAResultadoConsulta
+- TIAFerramenta
+- TIAConversa
+- TIAMensagem
+
+Contexto mínimo:
+
+- código do usuário;
+- empresa;
+- filial atual;
+- filiais permitidas;
+- rotina de origem;
+- versão do ERP;
+- identificador da conversa.
+
+Não envie informações que não sejam necessárias para a pergunta.
+
+======================================================================
+7. API INTERMEDIÁRIA E TOKEN
+======================================================================
+
+A chave/token do provedor deve ficar SOMENTE no servidor/API.
+
+Preferencialmente:
+- variável de ambiente;
+- secret manager;
+- configuração protegida no servidor.
+
+Nunca:
+- constante Delphi;
+- DFM;
+- INI distribuído;
+- banco local do cliente;
+- texto puro dentro do EXE.
+
+A API deve controlar:
+
+- autenticação ERP -> API;
+- provedor/modelo;
+- secrets;
+- limites;
+- auditoria;
+- consumo de tokens;
+- recuperação de conhecimento;
+- ferramentas;
+- consultas;
+- resposta final.
+
+======================================================================
+8. ABSTRAÇÃO DO PROVEDOR DE IA
+======================================================================
+
+Não acoplar o ERP diretamente à OpenAI.
+
+Criar contrato semelhante a:
+
+IAIProvider
+
+com operações conceituais como:
+- SendMessage;
+- ContinueConversation;
+- GenerateToolRequest;
+- InterpretToolResult;
+- GetUsage.
+
+Criar inicialmente um provider OpenAI, porém o restante do projeto deve depender da interface.
+
+Deve ser possível futuramente adicionar outro provider sem reescrever:
+- tela;
+- Centro de Conhecimento;
+- consultas;
+- segurança;
+- histórico.
+
+======================================================================
+9. TRÊS CAMADAS DE MEMÓRIA/CONTEXTO
+======================================================================
+
+Separar claramente:
+
+A) CONHECIMENTO DO ERP
+Persistente.
+Documentos, regras, schemas, Views BI, manuais etc.
+Indexado e reutilizado entre sessões.
+
+B) CONVERSA
+Histórico entre usuário e assistente.
+Pode ser salvo e reaberto.
+Não substitui conhecimento.
+
+C) CONTEXTO DO USUÁRIO
+Empresa, filial, usuário, permissões, rotina etc.
+
+Fechar a tela e abrir novamente NÃO deve provocar releitura completa da documentação.
+
+======================================================================
+10. CENTRO DE CONHECIMENTO
+======================================================================
+
+Criar arquitetura para um CENTRO DE CONHECIMENTO administrado dentro do próprio ERP.
+
+O usuário autorizado não deve precisar manipular manualmente pastas do Windows.
+
+O Centro deve prever:
+
+- módulos;
+- assuntos;
+- documentos;
+- versões;
+- anexos;
+- texto digitado/colado;
+- TXT;
+- Markdown;
+- PDF;
+- outros formatos suportados pela ingestão;
+- autor;
+- data;
+- palavras-chave;
+- descrição;
+- status;
+- aprovação;
+- rejeição;
+- publicação;
+- indexação;
+- reindexação;
+- inativação;
+- auditoria.
+
+Status conceituais:
+- RASCUNHO;
+- PENDENTE;
+- APROVADO;
+- REJEITADO;
+- INATIVO.
+
+Adaptar nomenclatura ao padrão real do ERP.
+
+======================================================================
+11. FLUXO "QUERO APRENDER"
+======================================================================
+
+Esse fluxo é requisito central.
+
+Quando a IA não tiver conhecimento suficiente, NÃO inventar.
+
+Retornar estado estruturado:
+
+knowledge_sufficient = false
+
+e mensagem amigável semelhante a:
+
+"Ainda não tenho conhecimento suficiente sobre este assunto no ERP.
+Posso aprender quando a documentação correspondente for adicionada
+ao Centro de Conhecimento."
+
+Na tela, disponibilizar para usuários autorizados:
+
+[ ENSINAR A IA ]
+
+O usuário/desenvolvimento poderá:
+- anexar documento;
+- escrever texto;
+- informar módulo;
+- informar assunto;
+- adicionar observações.
+
+O conteúdo NÃO entra imediatamente na base de produção.
+
+Fluxo:
+
+NOVO CONHECIMENTO
+    ->
+PENDENTE
+    ->
+REVISÃO
+    ->
+APROVAÇÃO
+    ->
+INDEXAÇÃO
+    ->
+DISPONÍVEL PARA A IA
+
+A IA pode SUGERIR módulo e assunto.
+A aprovação final pertence ao ERP/usuário autorizado.
+
+======================================================================
+12. DEMANDA DE CONHECIMENTO
+======================================================================
+
+Criar o conceito de DEMANDA DE CONHECIMENTO.
+
+Quando uma pergunta não puder ser respondida adequadamente, registrar opcionalmente:
+
+- pergunta;
+- usuário;
+- empresa;
+- filial;
+- data/hora;
+- módulo provável;
+- assunto provável;
+- motivo;
+- status;
+- conversa de origem;
+- documento que futuramente resolveu a lacuna.
+
+Isso permitirá um painel:
+
+"O que a IA ainda precisa aprender?"
+
+Exemplos:
+- Financeiro: 23 perguntas sem conhecimento suficiente.
+- Fiscal: 11.
+- Estoque: 4.
+
+======================================================================
+13. ORGANIZAÇÃO DA BASE DE CONHECIMENTO
+======================================================================
+
+Organizar logicamente por domínio:
+
+- Vendas
+- Clientes
+- Produtos
+- Estoque
+- Financeiro
+- PIX
+- Fiscal
+- Tributação
+- Compras
+- Cadastros
+
+Cada módulo pode evoluir independentemente.
+
+Cada fonte deve possuir metadados para facilitar recuperação seletiva.
+
+Exemplo de documentação de tabela:
+
+Tabela: CRECEBER
+Descrição: títulos de contas a receber.
+
+Campos relevantes:
+- CODCLI
+- NUMVENDA
+- PREST
+- DTVENC
+- VALOR
+- VPAGO
+- DTPAGO
+- CODFILIAL
+
+Regras:
+- somente registrar regras que tenham sido confirmadas.
+
+Relacionamentos:
+- somente relacionamentos confirmados.
+
+Exemplos SQL:
+- somente consultas validadas.
+
+IMPORTANTE:
+O exemplo acima é formato de documentação.
+Não assumir regras reais sem confirmação.
+
+======================================================================
+14. VIEWS DE BI COMO FONTE PREFERENCIAL
+======================================================================
+
+O ERP já possui Views utilizadas pela equipe de BI.
+
+Elas devem ser consideradas FONTES PREFERENCIAIS quando:
+- representarem corretamente a informação;
+- já consolidarem regras de negócio;
+- forem autorizadas para IA.
+
+Isso evita que a IA reconstrua regras complexas sobre tabelas operacionais.
+
+Cada View disponibilizada à IA deve possuir documentação:
+
+- nome;
+- módulo;
+- descrição;
+- finalidade;
+- granularidade;
+- campos;
+- significado dos campos;
+- filtros implícitos;
+- regras já consolidadas;
+- relacionamentos;
+- exemplos de perguntas;
+- exemplos de SELECT;
+- limitações.
+
+Criar whitelist de Views autorizadas.
+
+Não assumir que toda View BI pode ser acessada.
+
+======================================================================
+15. RECUPERAÇÃO SELETIVA / RAG
+======================================================================
+
+NÃO carregar toda a base de conhecimento a cada pergunta.
+
+Fluxo:
+
+PERGUNTA
+    ->
+DETECTAR DOMÍNIO/INTENÇÃO
+    ->
+BUSCAR SOMENTE CONHECIMENTO RELEVANTE
+    ->
+ENVIAR PEQUENO CONTEXTO AO MODELO
+
+Exemplo:
+
+Pergunta:
+"Quanto tenho de contas a receber vencidas?"
+
+Domínio:
+Financeiro
+
+Recuperar:
+- documentação relevante de Financeiro;
+- View BI correspondente, se existir;
+- regras necessárias de contas a receber.
+
+NÃO recuperar:
+- Estoque;
+- PIX;
+- Fiscal;
+- Tributação;
+- documentação irrelevante.
+
+Criar interface conceitual:
+
+IConhecimentoERP
+
+permitindo implementações:
+- local/simples;
+- vector store;
+- busca semântica;
+- outro mecanismo futuro.
+
+======================================================================
+16. ECONOMIA DE TOKENS
+======================================================================
+
+É requisito de arquitetura.
+
+Implementar desde o início:
+
+- chunking de documentos;
+- metadados;
+- top-K configurável;
+- limite máximo de contexto;
+- histórico limitado/resumido;
+- cache de metadados estáveis quando adequado;
+- consultas agregadas;
+- limite de resultado SQL;
+- não enviar milhares de linhas quando SUM/COUNT/GROUP BY resolve;
+- registrar tokens de entrada;
+- registrar tokens de saída;
+- registrar custo quando possível;
+- registrar latência;
+- permitir configuração de modelo.
+
+A existência de milhares de documentos NÃO deve significar que milhares de documentos sejam enviados ao modelo.
+
+======================================================================
+17. DADOS VIVOS X CONHECIMENTO
+======================================================================
+
+Distinguir obrigatoriamente:
+
+PERGUNTA DE CONHECIMENTO:
+"Como faço para alterar X na rotina Y?"
+
+Resposta:
+Centro de Conhecimento.
+
+PERGUNTA DE DADO ATUAL:
+"Quanto vendemos hoje?"
+
+Resposta:
+Ferramenta/consulta ao banco.
+
+PERGUNTA HÍBRIDA:
+"Por que determinado valor aparece assim?"
+
+Pode exigir:
+- regra/documentação;
+- consulta;
+- interpretação combinada.
+
+Nunca afirmar valor atual sem consultar a fonte apropriada.
+
+======================================================================
+18. MODELO HÍBRIDO DE CONSULTAS
+======================================================================
+
+Suportar dois caminhos.
+
+CAMINHO 1 — OPERAÇÕES CONHECIDAS
+
+Exemplos:
+- vendas.total
+- vendas.por_vendedor
+- vendas.por_produto
+- estoque.saldo
+- estoque.abaixo_minimo
+- financeiro.receber
+- financeiro.vencidos
+- pix.pendentes
+
+Essas operações usam SQL previamente validado.
+
+A IA apenas identifica:
+- operação;
+- parâmetros.
+
+Esse deve ser o caminho preferencial.
+
+CAMINHO 2 — PERGUNTA AD HOC
+
+Quando não existir operação conhecida:
+
+1. detectar domínio;
+2. recuperar documentação relevante;
+3. recuperar schema/Views autorizadas relevantes;
+4. solicitar SELECT;
+5. validar SELECT;
+6. aplicar escopo obrigatório;
+7. executar;
+8. limitar resultado;
+9. devolver dados ao modelo;
+10. gerar resposta natural.
+
+======================================================================
+19. EXECUÇÃO CONTROLADA DE SQL
+======================================================================
+
+Criar validador dedicado.
+
+Sugestão:
+- uIAValidadorSQL.pas
+
+Requisitos:
+
+- somente SELECT;
+- uma única instrução;
+- rejeitar DDL/DML;
+- rejeitar técnicas de ocultação;
+- whitelist de tabelas/Views;
+- parâmetros/binds;
+- timeout;
+- limite de registros;
+- proteção contra consultas excessivamente caras;
+- auditoria;
+- aplicação obrigatória de empresa/filial.
+
+NÃO implementar segurança somente com:
+
+Contains('DELETE')
+
+ou verificações equivalentes ingênuas.
+
+Se não houver parser SQL adequado disponível:
+- criar whitelist conservadora;
+- encapsular atrás de interface;
+- preparar substituição futura por parser robusto.
+
+======================================================================
+20. SEGURANÇA DE EMPRESA/FILIAL
+======================================================================
+
+O ERP/API é autoridade final.
+
+Mesmo se a IA solicitar:
+
+SELECT * FROM VW_VENDAS
+
+o servidor deve garantir que o usuário somente obtenha as empresas/filiais autorizadas.
+
+Nunca confiar exclusivamente em:
+WHERE CODFILIAL = ...
+
+gerado pela IA.
+
+======================================================================
+21. USUÁRIO DE BANCO
+======================================================================
+
+Quando a arquitetura permitir, criar credencial específica da camada IA com:
+
+- SELECT somente;
+- apenas objetos autorizados.
+
+Sem:
+- escrita;
+- DDL;
+- privilégios administrativos.
+
+Não criar usuário/GRANT automaticamente sem aprovação e sem conhecer o ambiente real.
+
+======================================================================
+22. CATÁLOGO DE FERRAMENTAS
+======================================================================
+
+Criar estrutura extensível de ferramentas.
+
+Sugestões iniciais, somente após confirmar banco real:
+
+- ConsultarVendaTotal
+- ConsultarPedido
+- ConsultarProduto
+- ConsultarEstoque
+- ConsultarCliente
+
+Posteriormente:
+- Financeiro;
+- PIX;
+- Fiscal;
+- Tributação;
+- BI.
+
+Adicionar nova ferramenta não deve exigir reescrever a tela.
+
+======================================================================
+23. HISTÓRICO DE CONVERSAS
+======================================================================
+
+Prever persistência opcional:
+
+IA_CONVERSA
+IA_MENSAGEM
+
+ou nomenclatura equivalente.
+
+Permitir:
+- nova conversa;
+- continuar conversa;
+- título;
+- data;
+- usuário;
+- contexto mínimo;
+- arquivamento.
+
+Não reenviar automaticamente todo o histórico ao modelo.
+Utilizar janela recente + resumo quando necessário.
+
+======================================================================
+24. MODELO CONCEITUAL DO CENTRO DE CONHECIMENTO
+======================================================================
+
+Entidades conceituais mínimas:
+
+- IA_MODULO
+- IA_DOCUMENTO
+- IA_DOCUMENTO_VERSAO
+- IA_DEMANDA_CONHECIMENTO
+- IA_CONVERSA
+- IA_MENSAGEM
+- IA_AUDITORIA
+
+Os nomes NÃO são definitivos.
+
+Antes de gerar DDL:
+- analisar padrão real de tabelas;
+- sequences;
+- triggers;
+- chaves;
+- auditoria;
+- tipos;
+- convenções do ERP.
+
+======================================================================
+25. API REST — CONTRATOS CONCEITUAIS
+======================================================================
+
+Projetar contratos independentes do provider.
+
+Exemplos conceituais:
+
+POST /ia/conversas
+POST /ia/perguntar
+GET  /ia/conversas/{id}
+
+POST /ia/conhecimento/documentos
+POST /ia/conhecimento/{id}/aprovar
+POST /ia/conhecimento/{id}/reindexar
+
+GET /ia/conhecimento/demandas
+
+Não assumir esses endpoints como definitivos se já existir API corporativa.
+
+Resposta de /ia/perguntar deve poder conter:
+
+{
+  conversation_id,
+  answer,
+  status,
+  knowledge_sufficient,
+  sources,
+  suggested_action,
+  knowledge_request_id,
+  usage,
+  error
+}
+
+Separar:
+- mensagem amigável;
+- erro técnico;
+- dados de auditoria.
+
+======================================================================
+26. PROMPT DE SISTEMA DO ASSISTENTE
+======================================================================
+
+Preparar configuração semelhante a:
+
+"Você é o Assistente do ERP.
+Responda exclusivamente perguntas relacionadas ao ERP, sua documentação,
+suas rotinas e os dados disponibilizados por ferramentas autorizadas.
+
+Não responda assuntos externos.
+
+Para dados atuais do banco, utilize exclusivamente ferramentas autorizadas.
+
+Nunca invente valores, registros, regras, relacionamentos ou resultados.
+
+Quando não possuir conhecimento suficiente, informe claramente a limitação
+e sinalize que o assunto pode ser ensinado através do Centro de Conhecimento.
+
+Nunca solicite nem execute alterações no banco de dados.
+
+As permissões e o escopo de empresa/filial são determinados pela aplicação,
+não por você."
+
+Manter o prompt configurável no servidor.
+
+======================================================================
+27. AUDITORIA
+======================================================================
+
+Registrar, respeitando privacidade e segurança:
+
+- usuário;
+- empresa;
+- filial;
+- conversa;
+- pergunta;
+- domínio detectado;
+- fontes utilizadas;
+- ferramenta;
+- SQL quando aplicável;
+- duração;
+- sucesso/erro;
+- tokens;
+- modelo/provider;
+- data/hora.
+
+Nunca registrar secrets.
+
+======================================================================
+28. ESTRUTURA SUGERIDA DE UNITS
+======================================================================
+
+Adaptar aos padrões reais antes de criar.
+
+Sugestão:
+
+uFrmAssistenteIA.pas/.dfm
+    interface de chat
+
+uAssistenteIA.pas
+    orquestração Delphi
+
+uIAApiClient.pas
+    comunicação com API intermediária
+
+uIATipos.pas
+    DTOs/tipos compartilhados
+
+uIAContexto.pas
+    contexto usuário/empresa/filial
+
+uIAConhecimentoERP.pas
+    contratos de conhecimento
+
+uIACentroConhecimento.pas
+    administração do conhecimento
+
+uIAFerramentas.pas
+    catálogo/execução
+
+uIAConsultasERP.pas
+    operações conhecidas
+
+uIAValidadorSQL.pas
+    validação
+
+uIAHistorico.pas
+    conversas
+
+uIALog.pas
+    auditoria
+
+Não criar unit nova se já existir infraestrutura equivalente.
+
+======================================================================
+29. COMPATIBILIDADE COM O ERP
+======================================================================
+
+ANTES DE ESCREVER CÓDIGO, analisar os arquivos Delphi que forem fornecidos e identificar:
+
+- versão do Delphi;
+- conexão FireDAC;
+- DataModule/conexão existente;
+- componentes visuais disponíveis;
+- padrão de formulários;
+- JSON;
+- HTTP;
+- exceptions;
+- mensagens;
+- variáveis de usuário;
+- empresa;
+- filial;
+- permissões;
+- nomenclatura;
+- gerenciamento de memória;
+- transações;
+- logging existente.
+
+Reutilizar infraestrutura atual sempre que adequado.
+
+Não introduzir framework desnecessário.
+
+======================================================================
+30. ESCALABILIDADE SEM RECEBER TODO O PROJETO
+======================================================================
+
+O desenvolvimento deve funcionar incrementalmente.
+
+Se eu fornecer somente arquivos relacionados ao Financeiro:
+- analise Financeiro;
+- documente Financeiro;
+- implemente contratos necessários;
+- não invente Vendas.
+
+Depois poderei fornecer outro módulo.
+
+Cada módulo deve poder produzir um PACOTE DE CONHECIMENTO contendo:
+
+- descrição funcional;
+- tabelas relevantes;
+- Views BI;
+- campos;
+- relacionamentos;
+- regras;
+- operações conhecidas;
+- exemplos SQL;
+- rotinas;
+- documentação de usuário.
+
+Esse pacote poderá ser publicado/indexado no Centro de Conhecimento.
+
+======================================================================
+31. TELAS ADMINISTRATIVAS FUTURAS
+======================================================================
+
+Prever:
+
+A) Assistente IA
+
+B) Centro de Conhecimento
+- módulos;
+- documentos;
+- versões;
+- pendentes;
+- aprovação;
+- indexação;
+- pesquisa;
+- auditoria.
+
+C) Painel de Lacunas
+- perguntas sem resposta;
+- módulo provável;
+- quantidade;
+- prioridade;
+- status.
+
+D) Administração/Monitoramento
+- tokens;
+- custo;
+- latência;
+- provider/modelo;
+- erros;
+- uso por empresa/usuário.
+
+Não implementar todas as telas de uma vez no MVP.
+
+======================================================================
+32. ROADMAP DE IMPLEMENTAÇÃO
+======================================================================
+
+FASE 1 — FUNDAÇÃO
+
+- analisar arquivos existentes;
+- criar tipos;
+- criar interfaces;
+- contexto;
+- configuração;
+- logging;
+- API client;
+- tela inicial de chat;
+- contratos independentes do provider.
+
+FASE 2 — CENTRO DE CONHECIMENTO
+
+- módulos;
+- documentos;
+- versões;
+- aprovação;
+- fluxo Quero Aprender;
+- demandas de conhecimento.
+
+FASE 3 — RAG / INDEXAÇÃO
+
+- chunking;
+- indexação;
+- busca semântica;
+- recuperação seletiva;
+- fontes.
+
+FASE 4 — DADOS VIVOS
+
+- ferramentas conhecidas;
+- Views BI autorizadas;
+- consultas somente leitura;
+- segurança empresa/filial.
+
+FASE 5 — SQL AD HOC CONTROLADO
+
+- recuperação de schema relevante;
+- geração;
+- validação;
+- execução;
+- limites.
+
+FASE 6 — EVOLUÇÃO
+
+- Financeiro;
+- PIX;
+- Fiscal;
+- Tributação;
+- análises comparativas;
+- gráficos;
+- métricas;
+- painel de lacunas.
+
+FASE FUTURA
+
+Qualquer escrita no ERP deverá utilizar ferramentas específicas,
+autorização explícita e regras próprias.
+
+NÃO implementar escrita agora.
+
+======================================================================
+33. CRITÉRIOS DE ACEITE DO MVP
+======================================================================
+
+1. Usuário abre o Assistente dentro do ERP.
+2. Faz pergunta relacionada ao ERP.
+3. Sistema envia contexto mínimo.
+4. Perguntas externas são recusadas.
+5. Perguntas documentais usam conhecimento recuperado.
+6. Dados atuais usam ferramenta autorizada.
+7. Empresa/filial são respeitadas.
+8. Nenhuma alteração de banco pode ser executada.
+9. Erros não fecham a aplicação.
+10. Consultas são auditáveis.
+11. Código é modular.
+12. Nova ferramenta pode ser adicionada sem alterar a tela.
+13. Documentação completa não é enviada em cada pergunta.
+14. Fechar/reabrir a tela não exige reindexar tudo.
+15. Quando faltar conhecimento, a IA não inventa e aciona o conceito "Quero Aprender".
+16. API key não existe no cliente Delphi.
+
+======================================================================
+34. FORMA DE TRABALHO DO CODEX
+======================================================================
+
+Sempre que eu fornecer novos arquivos:
+
+PASSO 1
+Analise os arquivos antes de alterar.
+
+PASSO 2
+Informe de forma CURTA:
+- o que encontrou;
+- o que será reutilizado;
+- o que precisa ser criado;
+- quais informações ainda faltam.
+
+PASSO 3
+Implemente diretamente a fase solicitada.
+
+PASSO 4
+Não fique apenas propondo arquitetura quando já houver informação suficiente para escrever código.
+
+PASSO 5
+Ao finalizar, informe objetivamente:
+- arquivos criados;
+- arquivos alterados;
+- alterações de banco necessárias;
+- configurações necessárias;
+- pendências para próxima etapa.
+
+Não fazer commits.
+
+Não alterar funcionalidades fora do escopo.
+
+Antes de substituir uma unit inteira:
+- verificar métodos públicos;
+- dependências;
+- referências por outras telas.
+
+Preservar compatibilidade com a versão Delphi utilizada.
+
+======================================================================
+35. PRIMEIRA TAREFA DO CODEX
+======================================================================
+
+NÃO tente implementar a plataforma inteira de uma vez.
+
+Ao receber os primeiros arquivos do ERP:
+
+1. identificar versão/padrões do Delphi;
+2. localizar conexão;
+3. localizar usuário/empresa/filial;
+4. localizar permissões;
+5. identificar infraestrutura HTTP/JSON;
+6. identificar padrão visual;
+7. propor a estrutura MÍNIMA REAL de units;
+8. implementar contratos/tipos;
+9. implementar client da API SEM OpenAI API key no Delphi;
+10. implementar primeira tela de chat desacoplada;
+11. preparar interfaces do Centro de Conhecimento;
+12. preparar interfaces de ferramentas;
+13. preparar persistência de conversa sem acoplar conhecimento ao chat;
+14. informar exatamente quais arquivos/dados devem ser fornecidos para a próxima fase.
+
+======================================================================
+36. ORIENTAÇÃO FINAL
+======================================================================
+
+Priorize simplicidade e código objetivo.
+
+Não crie abstrações sem utilidade prática imediata apenas por arquitetura.
+
+Ao mesmo tempo, preserve os pontos de extensão essenciais:
+- provider;
+- conhecimento;
+- ferramentas;
+- SQL;
+- segurança;
+- histórico.
+
+A implementação deve começar pequena e funcional, mas sem criar um beco sem saída arquitetural.
+
+A IA deve crescer conforme o ERP for sendo ensinado.
+
+O objetivo final é:
+
+UMA PLATAFORMA DE IA NATIVA DO ERP,
+ENSINÁVEL,
+GOVERNADA,
+SEGURA,
+PERSISTENTE,
+ECONÔMICA EM TOKENS,
+BASEADA EM DADOS REAIS,
+PRIORIZANDO VIEWS BI,
+E CAPAZ DE EVOLUIR MÓDULO POR MÓDULO.
+
+COMECE PELA FUNDAÇÃO E PELO MVP SOMENTE LEITURA.
+NÃO INVENTE O QUE AINDA NÃO FOI FORNECIDO.

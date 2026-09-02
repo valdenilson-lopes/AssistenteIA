@@ -1,0 +1,33 @@
+-- Start of DDL Script for View MARMORE.CPAGAS_12MESES
+-- Generated 19-set-2024 10:36:35 from MARMORE@192.168.0.163:1521/orcl
+
+CREATE OR REPLACE VIEW cpagas_12meses (
+   mes,
+   ano,
+   codgrupo,
+   codconta,
+   conta,
+   codfilial,
+   contas_pagas )
+AS
+SELECT
+   TO_CHAR(DATA, 'MM') AS MES,
+   TO_CHAR(DATA, 'YYYY') AS ANO,
+   CONTA.CODGRUPO,
+   CONTA.CODCONTA,
+   CONTA.CONTA,
+   FILIAL.CODFILIAL,
+   CONTAS_PAGAS( TO_CHAR(DATA, 'MM'), TO_CHAR(DATA, 'YYYY'), FILIAL.CODFILIAL, CONTA.CODCONTA )
+ FROM DATAS, CONTA, FILIAL
+ WHERE NVL(CONTA.TIPO, ' ') <> 'E'
+ GROUP BY TO_CHAR(DATA, 'MM'),
+   TO_CHAR(DATA, 'YYYY'),
+   CONTA.CODGRUPO,
+   CONTA.CODCONTA,
+   CONTA.CONTA,
+   FILIAL.CODFILIAL
+/
+
+
+-- End of DDL Script for View MARMORE.CPAGAS_12MESES
+

@@ -1,0 +1,8 @@
+[project]
+name = "erp-ia-server"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "API intermediaria governada para o Assistente IA do ERP"
+
+[tool.unittest]
+start-directory = "tests"

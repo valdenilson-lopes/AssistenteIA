@@ -1,0 +1,18 @@
+program AssistenteIA;
+
+uses
+  Vcl.Forms,
+  uFrmAssistenteIA in 'uFrmAssistenteIA.pas' {FrmAssistenteIA},
+  uIATipos in 'uIATipos.pas',
+  uIAContratos in 'uIAContratos.pas',
+  uIAConfiguracao in 'uIAConfiguracao.pas',
+  uIAApiClient in 'uIAApiClient.pas',
+  uIAHistoricoMemoria in 'uIAHistoricoMemoria.pas';
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.Title := 'Assistente IA do ERP';
+  Application.CreateForm(TFrmAssistenteIA, FrmAssistenteIA);
+  Application.Run;
+end.

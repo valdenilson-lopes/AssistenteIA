@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:erp:ia:pergunta:v1",
+  "title": "Requisição de pergunta ao assistente",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "question", "context"],
+  "properties": {
+    "request_id": { "type": "string", "format": "uuid" },
+    "conversation_id": { "type": ["string", "null"], "format": "uuid" },
+    "question": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "context": { "$ref": "urn:erp:ia:contexto-usuario:v1" },
+    "include_sources": { "type": "boolean", "default": true }
+  }
+}

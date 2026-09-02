@@ -1,0 +1,285 @@
+Você é um agente de desenvolvimento trabalhando em um ERP legado/moderno desenvolvido em Delphi VCL, com banco de dados Oracle e acesso via FireDAC. Sua tarefa é implementar um Assistente de IA interno no ERP, inicialmente somente para CONSULTA, permitindo que o usuário faça perguntas em linguagem natural e receba respostas exclusivamente sobre o sistema, seus dados e sua documentação.
+
+OBJETIVO GERAL
+Criar uma arquitetura segura, modular e expansível para integrar o ERP Delphi à OpenAI API. O assistente deve responder perguntas como:
+- Quanto vendemos hoje?
+- Qual vendedor vendeu mais este mês?
+- Quais produtos estão com estoque baixo?
+- Quanto temos de contas a receber vencidas?
+- Quais títulos PIX estão pendentes de conciliação?
+- Como faço determinada operação em uma rotina do ERP?
+
+RESTRIÇÕES FUNDAMENTAIS
+1. O assistente deve responder exclusivamente assuntos relacionados ao ERP e aos dados disponibilizados pelo sistema.
+2. Não habilitar navegação web para o usuário final.
+3. O MVP deve ser SOMENTE LEITURA. Não permitir INSERT, UPDATE, DELETE, MERGE, ALTER, DROP, CREATE, TRUNCATE, EXECUTE, GRANT, REVOKE ou chamadas de procedures que alterem dados.
+4. Nunca permitir que a IA possua credenciais administrativas do banco.
+5. Nunca confiar na IA para aplicar segurança de empresa, filial, usuário ou permissões. Essas regras devem ser aplicadas pela aplicação/servidor.
+6. Não enviar o schema completo do banco em cada pergunta.
+7. Não expor a chave da OpenAI em texto puro no executável Delphi distribuído aos clientes. Criar abstração para comunicação com um backend/API própria, mesmo que no ambiente de desenvolvimento seja possível utilizar configuração local.
+8. Não inventar informações. Quando os dados ou documentação não forem suficientes, responder que a informação não está disponível.
+
+ARQUITETURA DESEJADA
+Separar a solução em cinco camadas:
+
+A) Interface Delphi
+Criar uma tela de chat simples e moderna dentro do ERP.
+Sugestão de unit/form:
+- uFrmAssistenteIA.pas / .dfm
+
+Componentes mínimos:
+- área de histórico da conversa;
+- campo para digitação da pergunta;
+- botão Enviar;
+- indicador de processamento;
+- botão Nova Conversa;
+- tratamento de Enter/Ctrl+Enter;
+- bloqueio de envio duplicado enquanto uma solicitação estiver em andamento.
+
+B) Serviço Delphi
+Criar uma unit central, por exemplo:
+- uAssistenteIA.pas
+
+Responsabilidades:
+- receber pergunta;
+- montar contexto mínimo do usuário logado;
+- chamar a API intermediária;
+- interpretar retorno;
+- executar ferramentas autorizadas quando necessário;
+- devolver resultado para a interface.
+
+Criar tipos/records/classes claros, por exemplo:
+- TIAContextoUsuario
+- TIARequisicao
+- TIAResposta
+- TIAResultadoConsulta
+- TIAFerramenta
+
+Contexto mínimo:
+- código do usuário;
+- empresa;
+- filial atual;
+- lista de filiais permitidas, quando aplicável;
+- rotina de origem;
+- versão do ERP.
+
+C) Base de conhecimento do ERP
+A IA não deve receber todas as tabelas e regras a cada requisição.
+Criar uma documentação pesquisável organizada por domínio:
+- Vendas
+- Clientes
+- Produtos
+- Estoque
+- Financeiro
+- PIX
+- Fiscal
+- Tributação
+- Compras
+- Cadastros
+
+Cada tabela relevante deve possuir documentação semelhante a:
+
+Tabela: CRECEBER
+Descrição: títulos de contas a receber.
+Campos relevantes:
+- CODCLI: código do cliente.
+- NUMVENDA: número da venda.
+- PREST: parcela.
+- DTVENC: vencimento.
+- VALOR: valor original.
+- VPAGO: valor pago.
+- DTPAGO: data de pagamento.
+- CODFILIAL: filial.
+Regras:
+- título em aberto: DTPAGO IS NULL (ajustar conforme regra real do ERP).
+- título vencido: vencimento anterior à data atual e ainda em aberto.
+Relacionamentos:
+- CRECEBER.CODCLI = CLIENTE.CODCLI.
+Exemplos de SQL válidos: ...
+
+IMPORTANTE: não inventar regras. Criar estrutura para receber documentação real do projeto.
+
+D) Recuperação seletiva de conhecimento
+Implementar arquitetura para que, diante de uma pergunta, sejam recuperados apenas os trechos relevantes da documentação do ERP.
+
+Exemplo:
+Pergunta: "Quanto tenho de contas a receber vencidas?"
+Domínio detectado: Financeiro.
+Conhecimento recuperado: CRECEBER + regras de títulos em aberto/vencidos.
+Não carregar documentação de estoque, vendas, PIX etc.
+
+Prever integração posterior com vector store/file search ou mecanismo equivalente. No MVP, se necessário, criar uma interface IConhecimentoERP para permitir duas implementações:
+- implementação simples/local;
+- implementação futura usando busca semântica/vector store.
+
+E) Execução controlada de consultas
+A IA pode propor uma consulta SELECT, mas quem decide se ela será executada é o sistema.
+
+Criar um validador dedicado, por exemplo:
+- uIAValidadorSQL.pas
+
+Regras mínimas:
+- aceitar somente SELECT;
+- rejeitar múltiplas instruções;
+- rejeitar comentários usados para ocultar comandos perigosos;
+- rejeitar DDL/DML;
+- restringir tabelas/views permitidas;
+- limitar quantidade de registros retornados;
+- aplicar timeout;
+- preferir parâmetros em vez de concatenar valores;
+- registrar log da pergunta, SQL gerado, usuário, filial, duração e sucesso/erro;
+- garantir filtro de empresa/filial independentemente do SQL proposto pela IA.
+
+Não fazer apenas validação ingênua usando Contains('DELETE'). Estruturar o código para uma validação robusta. Caso não exista parser SQL disponível no projeto, implementar inicialmente uma whitelist conservadora e isolar essa implementação atrás de uma interface para posterior substituição.
+
+MODELO HÍBRIDO DE CONSULTAS
+Implementar suporte a dois caminhos:
+
+1. Operações conhecidas e parametrizadas
+Exemplos:
+- vendas.total
+- vendas.por_vendedor
+- vendas.por_produto
+- estoque.saldo
+- estoque.abaixo_minimo
+- financeiro.receber
+- financeiro.vencidos
+- pix.pendentes
+
+Essas operações devem utilizar SQL previamente validado pelo ERP.
+
+2. Perguntas novas/ad hoc
+Quando não houver uma operação pronta:
+- detectar domínio;
+- recuperar somente documentação relevante;
+- pedir à IA uma consulta SELECT;
+- validar;
+- executar;
+- retornar somente os dados necessários;
+- pedir à IA que transforme o resultado em linguagem natural.
+
+A preferência deve ser sempre por operação conhecida quando existir.
+
+BANCO DE DADOS
+O sistema utiliza Oracle. Utilizar FireDAC e parâmetros.
+Criar um usuário de banco destinado à IA com permissão apenas de SELECT nas tabelas/views autorizadas, quando a arquitetura do cliente permitir.
+Preferencialmente, criar views específicas para IA futuramente, como:
+- VW_IA_VENDAS
+- VW_IA_ITENS_VENDA
+- VW_IA_CLIENTES
+- VW_IA_PRODUTOS
+- VW_IA_ESTOQUE
+- VW_IA_FINANCEIRO
+- VW_IA_PIX
+
+Não criar essas views sem conhecer a estrutura real das tabelas. Apenas preparar a arquitetura e documentação para recebê-las.
+
+SEGURANÇA DE EMPRESA/FILIAL
+A aplicação deve ser a autoridade final.
+Mesmo que a IA gere um SELECT amplo, a aplicação deve impedir acesso a dados fora das empresas/filiais permitidas ao usuário.
+Nunca confiar em um filtro CODFILIAL gerado apenas pela IA.
+
+PROMPT DE SISTEMA DO ASSISTENTE
+Preparar uma constante/configuração semelhante a:
+
+"Você é o Assistente do ERP. Responda exclusivamente perguntas relacionadas ao ERP, sua documentação, suas rotinas e os dados que forem disponibilizados por ferramentas autorizadas. Não responda assuntos externos. Para dados do banco, utilize exclusivamente as ferramentas disponibilizadas. Nunca invente valores, registros, regras ou resultados. Se não possuir informação suficiente, informe claramente a limitação. Você nunca deve solicitar ou executar alterações no banco de dados."
+
+CONTROLE DE TOKENS/CUSTO
+Implementar desde o início:
+- não enviar schema completo em toda pergunta;
+- histórico resumido ou limitado;
+- recuperação apenas dos trechos relevantes;
+- limitar tamanho de resultados SQL;
+- preferir agregações no banco a enviar milhares de registros;
+- permitir configuração do modelo;
+- registrar estimativa/uso de tokens quando a API retornar essa informação;
+- cachear metadados e documentação estável quando fizer sentido.
+
+ESTRUTURA SUGERIDA DE UNITS
+- uFrmAssistenteIA.pas/.dfm -> interface.
+- uAssistenteIA.pas -> orquestração principal.
+- uIAOpenAIClient.pas -> comunicação com API/backend.
+- uIAConhecimentoERP.pas -> recuperação de documentação.
+- uIAFerramentas.pas -> registro e execução de ferramentas.
+- uIAConsultasERP.pas -> consultas conhecidas/parametrizadas.
+- uIAValidadorSQL.pas -> segurança de SQL.
+- uIALog.pas -> auditoria.
+- uIATipos.pas -> tipos compartilhados.
+
+COMPATIBILIDADE
+Antes de escrever código, analisar o projeto Delphi existente para identificar:
+- versão do Delphi;
+- padrão atual de conexão FireDAC;
+- unit de conexão já utilizada;
+- componentes de UI disponíveis;
+- bibliotecas JSON/HTTP existentes;
+- padrão de tratamento de exceções;
+- padrão de mensagens;
+- variáveis globais de empresa, filial e usuário;
+- mecanismo atual de permissões;
+- convenções de nomenclatura do projeto.
+
+Não introduzir frameworks desnecessários se o projeto já possui infraestrutura equivalente.
+
+ETAPAS DE IMPLEMENTAÇÃO
+Fase 1 - Fundação
+- criar tipos;
+- criar interfaces;
+- criar serviço de configuração;
+- criar logging;
+- criar tela inicial.
+
+Fase 2 - API
+- implementar cliente HTTP;
+- serialização JSON;
+- tratamento de erros HTTP;
+- timeout;
+- cancelamento quando possível.
+
+Fase 3 - Ferramentas conhecidas
+Implementar inicialmente, adaptando aos nomes reais do banco somente depois de analisar o projeto:
+- ConsultarVendaTotal;
+- ConsultarPedido;
+- ConsultarProduto;
+- ConsultarEstoque;
+- ConsultarCliente.
+
+Fase 4 - Conhecimento
+- criar formato de documentação por domínio/tabela;
+- criar interface de busca;
+- recuperar apenas contexto relevante.
+
+Fase 5 - SQL dinâmico somente leitura
+- geração pela IA;
+- validação;
+- limitação;
+- aplicação obrigatória de escopo;
+- execução FireDAC;
+- retorno estruturado.
+
+Fase 6 - Evoluções
+Somente depois do MVP estável:
+- financeiro;
+- PIX;
+- fiscal;
+- tributação;
+- análises comparativas;
+- geração de gráficos;
+- comandos de escrita, se algum dia forem desejados, deverão usar ferramentas específicas, autorização explícita e regras próprias. Não implementar escrita nesta fase.
+
+CRITÉRIOS DE ACEITE DO MVP
+1. Usuário abre o assistente dentro do ERP.
+2. Faz uma pergunta de vendas/produto/estoque/cliente/pedido.
+3. O sistema identifica ferramenta/consulta apropriada.
+4. Somente dados da empresa/filial permitida são consultados.
+5. Nenhuma instrução de alteração de banco pode ser executada.
+6. A resposta é exibida em linguagem natural.
+7. Perguntas externas ao ERP são recusadas de forma curta.
+8. Erros de API ou banco são tratados sem fechar a aplicação.
+9. Todas as consultas realizadas são auditáveis.
+10. O código fica modular para adicionarmos novas ferramentas sem reescrever a tela.
+
+INSTRUÇÃO DE TRABALHO PARA O CODEX
+Primeiro analise o projeto e as units existentes. Não suponha nomes de tabelas, campos, componentes ou variáveis que não existam. Reutilize o padrão arquitetural atual. Faça as alterações diretamente nos arquivos do projeto quando possível. Preserve funcionalidades existentes. Antes de substituir uma unit inteira, confira dependências e métodos públicos utilizados por outras telas.
+
+Comece implementando a fundação e o MVP somente leitura. Quando faltar informação real do banco para uma consulta específica, deixe a ferramenta estruturada e indique exatamente quais tabelas/campos precisam ser confirmados, em vez de inventá-los.

@@ -1,0 +1,177 @@
+object FrmAssistenteIA: TFrmAssistenteIA
+  Left = 0
+  Top = 0
+  Caption = 'Assistente IA do ERP'
+  ClientHeight = 720
+  ClientWidth = 1040
+  Color = 16250871
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = 3158064
+  Font.Height = -13
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  OldCreateOrder = True
+  Position = poScreenCenter
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  PixelsPerInch = 96
+  TextHeight = 17
+  object memConversa: TMemo
+    AlignWithMargins = True
+    Left = 32
+    Top = 112
+    Width = 976
+    Height = 435
+    Margins.Left = 32
+    Margins.Top = 24
+    Margins.Right = 32
+    Margins.Bottom = 16
+    Align = alClient
+    BorderStyle = bsNone
+    Color = clWhite
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = 3158064
+    Font.Height = -15
+    Font.Name = 'Segoe UI'
+    Font.Style = []
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssVertical
+    TabOrder = 0
+  end
+  object pnlCabecalho: TPanel
+    Left = 0
+    Top = 0
+    Width = 1040
+    Height = 88
+    Align = alTop
+    BevelOuter = bvNone
+    Color = 2105376
+    ParentBackground = False
+    TabOrder = 1
+    DesignSize = (
+      1040
+      88)
+    object lblTitulo: TLabel
+      Left = 32
+      Top = 18
+      Width = 176
+      Height = 25
+      Caption = 'Assistente IA do ERP'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -19
+      Font.Name = 'Segoe UI Semibold'
+      Font.Style = []
+      ParentFont = False
+    end
+    object lblSubtitulo: TLabel
+      Left = 32
+      Top = 50
+      Width = 368
+      Height = 17
+      Caption = 'Dados reais, conhecimento aprovado e acesso somente leitura'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clSilver
+      Font.Height = -13
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+    end
+    object btnNovaConversa: TButton
+      Left = 858
+      Top = 24
+      Width = 150
+      Height = 40
+      Anchors = [akTop, akRight]
+      Caption = 'Nova conversa'
+      TabOrder = 0
+      OnClick = btnNovaConversaClick
+    end
+  end
+  object pnlRodape: TPanel
+    Left = 0
+    Top = 563
+    Width = 1040
+    Height = 116
+    Align = alBottom
+    BevelOuter = bvNone
+    Color = 16250871
+    ParentBackground = False
+    TabOrder = 2
+    DesignSize = (
+      1040
+      116)
+    object memPergunta: TMemo
+      Left = 32
+      Top = 8
+      Width = 790
+      Height = 80
+      Anchors = [akLeft, akTop, akRight, akBottom]
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = 3158064
+      Font.Height = -14
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      ScrollBars = ssVertical
+      TabOrder = 0
+      OnKeyDown = memPerguntaKeyDown
+    end
+    object btnEnviar: TButton
+      Left = 838
+      Top = 8
+      Width = 170
+      Height = 38
+      Anchors = [akTop, akRight]
+      Caption = 'Enviar  Ctrl+Enter'
+      Default = True
+      TabOrder = 1
+      OnClick = btnEnviarClick
+    end
+    object btnEnsinar: TButton
+      Left = 838
+      Top = 52
+      Width = 170
+      Height = 36
+      Anchors = [akTop, akRight]
+      Caption = 'Ensinar a IA'
+      TabOrder = 2
+      Visible = False
+      OnClick = btnEnsinarClick
+    end
+  end
+  object pnlStatus: TPanel
+    Left = 0
+    Top = 679
+    Width = 1040
+    Height = 41
+    Align = alBottom
+    BevelOuter = bvNone
+    Color = 15724527
+    ParentBackground = False
+    TabOrder = 3
+    DesignSize = (
+      1040
+      41)
+    object lblStatus: TLabel
+      Left = 32
+      Top = 11
+      Width = 178
+      Height = 17
+      Caption = 'Pronto para ajudar com o ERP'
+    end
+    object prgProcessando: TProgressBar
+      Left = 838
+      Top = 13
+      Width = 170
+      Height = 12
+      Anchors = [akTop, akRight]
+      Style = pbstMarquee
+      MarqueeInterval = 30
+      TabOrder = 0
+      Visible = False
+    end
+  end
+end

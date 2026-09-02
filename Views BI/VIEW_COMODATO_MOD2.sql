@@ -1,0 +1,276 @@
+-- Start of DDL Script for View MARMORE.VIEW_COMODATO_MOD2
+-- Generated 19-set-2024 10:37:19 from MARMORE@192.168.0.163:1521/orcl
+
+CREATE OR REPLACE VIEW view_comodato_mod2 (
+   filial,
+   filial_cpfcnpj,
+   filial_endereco,
+   filial_endereco2,
+   filial_bairro,
+   filial_cidade,
+   filial_estado,
+   filial_cep,
+   filial_telefone,
+   cliente,
+   cliente_cpfcnpj,
+   cliente_endereco,
+   cliente_endereco2,
+   cliente_bairro,
+   cliente_cidade,
+   cliente_estado,
+   cliente_cep,
+   cliente_telefone,
+   cliente_email,
+   id,
+   dtlanc,
+   descproduto,
+   embalagem,
+   codmotorista,
+   nome,
+   codcli,
+   codprod,
+   dtmov,
+   qt,
+   punit,
+   ptot,
+   operacao,
+   codfilial,
+   obs,
+   local_data )
+AS
+SELECT
+
+   FILIAL.FILIAL,   
+
+   SUBSTR(FILIAL.CPFCNPJ, 1, 2) || '.' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 3, 3) || '.' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 6, 3) || '/' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 9, 4) || '-' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 13, 2) AS FILIAL_CPFCNPJ, 
+
+   FILIAL.ENDERECO AS FILIAL_ENDERECO, 
+
+   FILIAL.ENDERECO || ', ' || 
+
+'Nº ' || FILIAL.NUMERO || ', ' || 
+
+   FILIAL.BAIRRO || ', ' || 
+
+   FILIAL.CIDADE || '/' || 
+
+   FILIAL.ESTADO || ' - CEP: ' || 
+
+   FILIAL.CEP AS FILIAL_ENDERECO2, 
+
+   FILIAL.BAIRRO AS FILIAL_BAIRRO, 
+
+   FILIAL.CIDADE AS FILIAL_CIDADE, 
+
+   FILIAL.ESTADO AS FILIAL_ESTADO, 
+
+   FILIAL.CEP AS FILIAL_CEP, 
+
+   FILIAL.TELEFONE AS FILIAL_TELEFONE, 
+
+   CLIENTE.CLIENTE, 
+
+   CLIENTE.CPFCNPJ AS CLIENTE_CPFCNPJ, 
+
+   CLIENTE.ENDERECO AS CLIENTE_ENDERECO, 
+
+   CLIENTE.ENDERECO || ', ' || 
+
+   CLIENTE.BAIRRO || ', ' || 
+
+   CLIENTE.CIDADE || '/' || 
+
+   CLIENTE.ESTADO || ' - CEP: ' || 
+
+   CLIENTE.CEP AS CLIENTE_ENDERECO2, 
+
+   CLIENTE.BAIRRO AS CLIENTE_BAIRRO, 
+
+   CLIENTE.CIDADE AS CLIENTE_CIDADE, 
+
+   CLIENTE.ESTADO AS CLIENTE_ESTADO, 
+
+   CLIENTE.CEP AS CLIENTE_CEP, 
+
+   CLIENTE.TELEFONE AS CLIENTE_TELEFONE, 
+
+   CLIENTE.EMAIL AS CLIENTE_EMAIL, 
+
+   BLANCCOMODATO.ID, 
+
+   BLANCCOMODATO.DTLANC, 
+
+   PRODUTO.DESCRICAO AS DESCPRODUTO, 
+
+   PRODUTO.EMBALAGEM,
+
+   BLANCCOMODATO.CODMOTORISTA, 
+
+   MOTORISTA.NOME, 
+
+   BLANCCOMODATO.CODCLI, 
+
+   BLANCCOMODATO.CODPROD, 
+
+   BLANCCOMODATO.DTMOV, 
+
+   BLANCCOMODATO.QT, 
+
+   BLANCCOMODATO.PUNIT, 
+
+   ROUND(BLANCCOMODATO.QT * BLANCCOMODATO.PUNIT, 2) AS PTOT, 
+
+   BLANCCOMODATO.OPERACAO, 
+
+   BLANCCOMODATO.CODFILIAL, 
+
+   BLANCCOMODATO.OBS, 
+
+   FILIAL.CIDADE || '/' || 
+
+   FILIAL.ESTADO || ', ' || 
+
+   TO_CHAR(SYSDATE, 'DD "de" fmMonth "de" YYYY','NLS_DATE_LANGUAGE=PORTUGUESE')
+
+   AS LOCAL_DATA 
+
+FROM
+
+   BLANCCOMODATO, 
+
+   FILIAL, 
+
+   PRODUTO, 
+
+   MOTORISTA,
+
+   CLIENTE
+
+WHERE
+
+   BLANCCOMODATO.CODMOTORISTA = MOTORISTA.CODMOTORISTA 
+
+   AND BLANCCOMODATO.CODPROD = PRODUTO.CODPROD
+
+   AND BLANCCOMODATO.CODCLI = CLIENTE.CODCLI
+
+GROUP BY
+
+   FILIAL.FILIAL,   
+
+   SUBSTR(FILIAL.CPFCNPJ, 1, 2) || '.' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 3, 3) || '.' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 6, 3) || '/' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 9, 4) || '-' || 
+
+   SUBSTR(FILIAL.CPFCNPJ, 13, 2), 
+
+   FILIAL.ENDERECO, 
+
+   FILIAL.ENDERECO || ', ' || 
+
+'Nº ' || FILIAL.NUMERO || ', ' || 
+
+   FILIAL.BAIRRO || ', ' || 
+
+   FILIAL.CIDADE || '/' || 
+
+   FILIAL.ESTADO || ' - CEP: ' || 
+
+   FILIAL.CEP, 
+
+   FILIAL.BAIRRO, 
+
+   FILIAL.CIDADE, 
+
+   FILIAL.ESTADO, 
+
+   FILIAL.CEP, 
+
+   FILIAL.TELEFONE, 
+
+   CLIENTE.CLIENTE, 
+
+   CLIENTE.CPFCNPJ, 
+
+   CLIENTE.ENDERECO, 
+
+   CLIENTE.ENDERECO || ', ' || 
+
+   CLIENTE.BAIRRO || ', ' || 
+
+   CLIENTE.CIDADE || '/' || 
+
+   CLIENTE.ESTADO || ' - CEP: ' || 
+
+   CLIENTE.CEP, 
+
+   CLIENTE.BAIRRO, 
+
+   CLIENTE.CIDADE, 
+
+   CLIENTE.ESTADO, 
+
+   CLIENTE.CEP, 
+
+   CLIENTE.TELEFONE, 
+
+   CLIENTE.EMAIL, 
+
+   BLANCCOMODATO.ID, 
+
+   BLANCCOMODATO.DTLANC, 
+
+   BLANCCOMODATO.CODMOTORISTA, 
+
+   BLANCCOMODATO.CODCLI, 
+
+   BLANCCOMODATO.CODPROD, 
+
+   BLANCCOMODATO.DTMOV, 
+
+   MOTORISTA.NOME, 
+
+   BLANCCOMODATO.QT , 
+
+   BLANCCOMODATO.PUNIT, 
+
+   ROUND(BLANCCOMODATO.QT * BLANCCOMODATO.PUNIT, 2), 
+
+   BLANCCOMODATO.OPERACAO, 
+
+   BLANCCOMODATO.CODFILIAL, 
+
+   PRODUTO.DESCRICAO,
+
+   PRODUTO.EMBALAGEM,
+
+   BLANCCOMODATO.OBS,
+
+   FILIAL.CIDADE || '/' || 
+
+   FILIAL.ESTADO || ', ' || 
+
+   TO_CHAR(SYSDATE, 'DD "de" fmMonth "de" YYYY','NLS_DATE_LANGUAGE=PORTUGUESE')
+
+ORDER BY
+
+   CODMOTORISTA,
+
+   ID
+/
+
+
+-- End of DDL Script for View MARMORE.VIEW_COMODATO_MOD2
+

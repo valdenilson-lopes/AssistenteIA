@@ -1,0 +1,41 @@
+-- Start of DDL Script for View MARMORE.ESTRUTURA_V
+-- Generated 19-set-2024 10:36:50 from MARMORE@192.168.0.163:1521/orcl
+
+CREATE OR REPLACE VIEW estrutura_v (
+   tabela,
+   linhas,
+   id,
+   campo,
+   tipo,
+   tamanho,
+   decimais,
+   permite_nulo )
+AS
+SELECT
+  TAB.TABLE_NAME  AS TABELA,
+  TAB.NUM_ROWS    AS LINHAS,
+  COL.COLUMN_ID   AS ID,
+  COL.COLUMN_NAME AS CAMPO,
+  COL.DATA_TYPE   AS TIPO,
+  CASE COL.DATA_TYPE
+    WHEN 'DATE' THEN
+      10
+    ELSE
+      DECODE(COL.DATA_PRECISION, NULL, COL.CHAR_COL_DECL_LENGTH, COL.DATA_PRECISION)
+    END
+                  AS TAMANHO,
+  COL.DATA_SCALE  AS DECIMAIS,
+  CASE WHEN COL.NULLABLE = 'Y' THEN 'S' ELSE 'N' END
+                  AS PERMITE_NULO
+ FROM
+  USER_TABLES      TAB,
+  USER_TAB_COLUMNS COL
+ WHERE
+  TAB.TABLE_NAME = COL.TABLE_NAME
+ ORDER BY
+  TAB.TABLE_NAME, COLUMN_ID
+/
+
+
+-- End of DDL Script for View MARMORE.ESTRUTURA_V
+
