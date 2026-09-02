@@ -90,7 +90,7 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
-        <Debugger_RunParams>implasticos AVEMARIA DESKTOP-PRR9R2U:1521/ORCL BELT 9020 DEV</Debugger_RunParams>
+        <Debugger_RunParams>implasticos AVEMARIA DESKTOP-PRR9R2U:1521/ORCL BELT 9050 DEV</Debugger_RunParams>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>

@@ -19,6 +19,9 @@ class Settings:
     max_question_chars: int = 8000
     max_result_rows: int = 200
     query_timeout_seconds: int = 15
+    oracle_user: str = ""
+    oracle_password: str = ""
+    oracle_dsn: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -36,4 +39,7 @@ class Settings:
             max_question_chars=int(os.getenv("ERP_IA_MAX_QUESTION_CHARS", "8000")),
             max_result_rows=int(os.getenv("ERP_IA_MAX_RESULT_ROWS", "200")),
             query_timeout_seconds=int(os.getenv("ERP_IA_QUERY_TIMEOUT_SECONDS", "15")),
+            oracle_user=os.getenv("ERP_IA_ORACLE_USER", ""),
+            oracle_password=os.getenv("ERP_IA_ORACLE_PASSWORD", ""),
+            oracle_dsn=os.getenv("ERP_IA_ORACLE_DSN", ""),
         )

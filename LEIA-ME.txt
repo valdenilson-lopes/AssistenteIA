@@ -1,12 +1,9 @@
-Correção de compatibilidade DPAPI
+Implementação da primeira ferramenta de dados vivos:
+- vendas_hoje
+- BI_VENDA_FLYGESTOR
+- filtro obrigatório pela filial do contexto
+- Oracle somente leitura
 
-Substitua apenas:
-src\delphi\AssistenteIA\uIAApiLocalManager.pas
+Substitua os arquivos mantendo a estrutura de pastas e reinicie a API.
 
-Removida a dependência:
-Winapi.WinCrypt
-
-Agora CryptProtectData/CryptUnprotectData e DATA_BLOB são declarados localmente,
-usando diretamente Crypt32.dll do Windows.
-
-A proteção DPAPI da OpenAI API Key e senha Oracle foi mantida.
+Se aparecer erro informando que o pacote oracledb não está instalado, instale-o no MESMO Python usado pela API.
